@@ -120,7 +120,7 @@
         "description": "The base URL for dependent assets",
         "artifactsBaseUrl": ""
       },
-      "defaultValue": "https://gallery.azure.com/artifact/20151001/datastax.datastax-enterprise-stsingledc.1.0.98/Artifacts"
+      "defaultValue": "https://github.com/marcelaldecoa/deploy-dse-multidc/tree/master/Cassandra-MultiDC/dse-artifacts"
     },
     "location": {
       "type": "string",

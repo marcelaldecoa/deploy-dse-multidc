@@ -29,11 +29,11 @@
       <Visible>False</Visible>
     </None>
     <Content Include="Deploy-AzureResourceGroup.ps1" />
-    <None Include="Artifacts\node.sh" />
-    <None Include="Artifacts\nodes.json" />
-    <None Include="Artifacts\opsCenter.json" />
-    <None Include="Artifacts\opsCenter.sh" />
-    <None Include="Artifacts\opsCenterPublicIP.json" />
+    <None Include="dse-artifacts\node.sh" />
+    <None Include="dse-artifacts\nodes.json" />
+    <None Include="dse-artifacts\opsCenter.json" />
+    <None Include="dse-artifacts\opsCenter.sh" />
+    <None Include="dse-artifacts\opsCenterPublicIP.json" />
   </ItemGroup>
   <Target Name="GetReferenceAssemblyPaths" />
 </Project>

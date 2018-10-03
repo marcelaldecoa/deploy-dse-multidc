@@ -180,7 +180,7 @@
   "resources": [
     {
       "type": "Microsoft.Network/networkSecurityGroups",
-      "name": "nodeNSG",
+      "name": "[concat(parameters('namespace'), 'nodeNSG')]",
       "location": "[parameters('location')]",
       "condition": "[equals(parameters('publicIpOnNodes'), 'yes')]",
       "apiVersion": "2017-11-01",
