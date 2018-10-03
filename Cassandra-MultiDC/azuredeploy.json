@@ -1,0 +1,407 @@
+{
+    "$schema": "https://schema.management.azure.com/schemas/2015-01-01/deploymentTemplate.json#",
+    "contentVersion": "1.0.0.0",
+  "parameters": {
+    "nodeCount": {
+      "type": "int",
+      "defaultValue": 3,
+      "minValue": 1,
+      "maxValue": 40,
+      "metadata": {
+        "description": "Number of virtual machines to provision for the cluster"
+      }
+    },
+    "vmSize": {
+      "type": "string",
+      "defaultValue": "Standard_DS4_v2",
+      "metadata": {
+        "description": "Size of virtual machine to provision for the cluster"
+      }
+    },
+    "DSEVersion": {
+      "type": "string",
+      "defaultValue": "6.0.0",
+      "allowedValues": [
+        "6.0.0",
+        "5.1.9"
+      ],
+      "metadata": {
+        "description": "Version of DSE to deploy"
+      }
+    },
+    "opscvmSize": {
+      "type": "string",
+      "defaultValue": "Standard_D1_v2",
+      "metadata": {
+        "description": "Size of OpsCenter VM"
+      }
+    },
+    "adminUsername": {
+      "type": "string",
+      "metadata": {
+        "description": "Admin user name for the virtual machines"
+      }
+    },
+    "adminPassword": {
+      "type": "securestring",
+      "metadata": {
+        "description": "Admin password for the virtual machines"
+      }
+    },
+    "DBPassword": {
+      "type": "securestring",
+      "metadata": {
+        "description": "Password for default C* user 'cassandra'"
+      }
+    },
+    "OpsCPassword": {
+      "type": "securestring",
+      "metadata": {
+        "description": "Password for default OpsCenter user 'admin'"
+      }
+    },
+    "publicIpOnNodes": {
+      "type": "string",
+      "metadata": {
+        "description": "Create and use public ip's on node vm's"
+      },
+      "defaultValue": "yes",
+      "allowedValues": [
+        "yes",
+        "no"
+      ]
+    },
+    "publicIpOnOpsc": {
+      "type": "string",
+      "metadata": {
+        "description": "Create and use public ip's on node vm's"
+      },
+      "defaultValue": "yes",
+      "allowedValues": [
+        "yes",
+        "no"
+      ]
+    },
+    "vnetNeworExisting": {
+      "type": "string",
+      "metadata": {
+        "description": "Create and use public ip's on node vm's"
+      },
+      "defaultValue": "new",
+      "allowedValues": [
+        "new",
+        "existing"
+      ]
+    },
+    "vnetName": {
+      "type": "string",
+      "defaultValue": "vnet",
+      "metadata": {
+        "description": "Name of existing vnet, unused if blank."
+      }
+    },
+    "vnetRG": {
+      "type": "string",
+      "defaultValue": "[resourceGroup().name]",
+      "metadata": {
+        "description": "Resource group of vnet if different"
+      }
+    },
+    "subnetName": {
+      "type": "string",
+      "defaultValue": "subnet",
+      "metadata": {
+        "description": "Name of existing vnet, unused if blank."
+      }
+    },
+    "baseUrl": {
+      "type": "string",
+      "metadata": {
+        "description": "The base URL for dependent assets",
+        "artifactsBaseUrl": ""
+      },
+      "defaultValue": "https://gallery.azure.com/artifact/20151001/datastax.datastax-enterprise-stsingledc.1.0.98/Artifacts"
+    },
+    "location": {
+      "type": "string",
+      "metadata": {
+        "description": "Location where resources will be deployed."
+      }
+    },
+    "secondaryLocation": {
+      "type": "string",
+      "metadata": {
+        "description": "Secondary location where resources will be deployed."
+      }
+    }
+  },
+    "variables": {
+        "templateUrl": "[concat(parameters('baseUrl'), '/')]",
+        "extensionUrl": "[concat(parameters('baseUrl'), '/')]",
+        "nodesTemplateUrl": "[concat(variables('templateUrl'), 'nodes.json')]",
+        "opsCenterPubIPTemplateUrl": "[concat(variables('templateUrl'), 'opsCenterPublicIP.json')]",
+        "opsCenterTemplateUrl": "[concat(variables('templateUrl'), 'opsCenter.json')]",
+        "uniqueString": "[uniqueString(resourceGroup().id, deployment().name)]",
+        "osSettings": {
+            "imageReference": {
+                "publisher": "datastax",
+                "offer": "datastax-enterprise",
+                "sku": "datastaxenterprise",
+                "version": "latest"
+            },
+            "scripts": [
+                "[concat(variables('extensionUrl'), 'node.sh')]",
+                "[concat(variables('extensionUrl'), 'opsCenter.sh')]"
+            ]
+        }
+    },
+  "resources": [
+    {
+      "apiVersion": "2017-11-01",
+      "type": "Microsoft.Network/virtualNetworks",
+      "name": "[parameters('vnetName')]",
+      "condition": "[equals(parameters('vnetNeworExisting'), 'new')]",
+      "location": "[parameters('location')]",
+      "dependsOn": [],
+      "properties": {
+        "addressSpace": {
+          "addressPrefixes": [
+            "10.0.0.0/16"
+          ]
+        },
+        "subnets": [
+          {
+            "name": "[parameters('subnetName')]",
+            "properties": {
+              "addressPrefix": "10.0.0.0/24"
+            }
+          }
+        ]
+      }
+    },
+    {
+      "name": "opsCenterPublicIP",
+      "type": "Microsoft.Resources/deployments",
+      "apiVersion": "2017-08-01",
+      "condition": "[equals(parameters('publicIpOnOpsc'), 'yes')]",
+      "dependsOn": [],
+      "properties": {
+        "mode": "Incremental",
+        "templateLink": {
+          "uri": "[variables('opsCenterPubIPTemplateUrl')]",
+          "contentVersion": "1.0.0.0"
+        },
+        "parameters": {
+          "location": {
+            "value": "[parameters('location')]"
+          },
+          "uniqueString": {
+            "value": "[variables('uniqueString')]"
+          }
+        }
+      }
+    },
+    {
+      "name": "opsCenter",
+      "type": "Microsoft.Resources/deployments",
+      "apiVersion": "2017-08-01",
+      "dependsOn": [
+        "Microsoft.Resources/deployments/opsCenterPublicIP"
+      ],
+      "properties": {
+        "mode": "Incremental",
+        "templateLink": {
+          "uri": "[variables('opsCenterTemplateUrl')]",
+          "contentVersion": "1.0.0.0"
+        },
+        "parameters": {
+          "location": {
+            "value": "[parameters('location')]"
+          },
+          "publicIPResourceId": {
+            "value": "[if(equals(parameters('publicIpOnOpsc'), 'yes'), reference('opsCenterPublicIP','2017-08-01').outputs.opsCenterPublicIPResourceId.value, 'notcreated')]"
+          },
+          "publicIpOnOpsc": {
+            "value": "[parameters('publicIpOnOpsc')]"
+          },
+          "uniqueString": {
+            "value": "[variables('uniqueString')]"
+          },
+          "vmSize": {
+            "value": "[parameters('opscvmSize')]"
+          },
+          "adminUsername": {
+            "value": "[parameters('adminUsername')]"
+          },
+          "adminPassword": {
+            "value": "[parameters('adminPassword')]"
+          },
+          "OpsCPassword": {
+            "value": "[parameters('OpsCPassword')]"
+          },
+          "DBPassword": {
+            "value": "[parameters('DBPassword')]"
+          },
+          "DSEVersion": {
+            "value": "[parameters('DSEVersion')]"
+          },
+          "nodeCount": {
+            "value": "[parameters('nodeCount')]"
+          },
+          "osSettings": {
+            "value": "[variables('osSettings')]"
+          },
+          "vnetName": {
+            "value": "[parameters('vnetName')]"
+          },
+          "subnetName": {
+            "value": "[parameters('subnetName')]"
+          },
+          "vnetRG": {
+            "value": "[parameters('vnetRG')]"
+          }
+        }
+      }
+    },
+    {
+      "name": "nodesMainLocation",
+      "type": "Microsoft.Resources/deployments",
+      "apiVersion": "2017-08-01",
+      "dependsOn": [],
+      "properties": {
+        "mode": "Incremental",
+        "templateLink": {
+          "uri": "[variables('nodesTemplateUrl')]",
+          "contentVersion": "1.0.0.0"
+        },
+        "parameters": {
+          "location": {
+            "value": "[parameters('location')]"
+          },
+          "opsCenterFQDN": {
+            "value": "[if(equals(parameters('publicIpOnOpsc'), 'yes'), reference('opsCenterPublicIP').outputs.opsCenterFQDN.value, 'opscenter')]"
+          },
+          "uniqueString": {
+            "value": "[variables('uniqueString')]"
+          },
+          "OpsCPassword": {
+            "value": "[parameters('OpsCPassword')]"
+          },
+          "adminUsername": {
+            "value": "[parameters('adminUsername')]"
+          },
+          "adminPassword": {
+            "value": "[parameters('adminPassword')]"
+          },
+          "nodeCount": {
+            "value": "[parameters('nodeCount')]"
+          },
+          "vmSize": {
+            "value": "[parameters('vmSize')]"
+          },
+          "osSettings": {
+            "value": "[variables('osSettings')]"
+          },
+          "vnetName": {
+            "value": "[parameters('vnetName')]"
+          },
+          "subnetName": {
+            "value": "[parameters('subnetName')]"
+          },
+          "vnetRG": {
+            "value": "[parameters('vnetRG')]"
+          },
+          "publicIpOnNodes": {
+            "value": "[parameters('publicIpOnNodes')]"
+          },
+          "namespace": {
+            "value": "dc0"
+          }
+        }
+      }
+    },
+    {
+      "name": "nodesSecondaryLocation",
+      "type": "Microsoft.Resources/deployments",
+      "apiVersion": "2017-08-01",
+      "dependsOn": [],
+      "properties": {
+        "mode": "Incremental",
+        "templateLink": {
+          "uri": "[variables('nodesTemplateUrl')]",
+          "contentVersion": "1.0.0.0"
+        },
+        "parameters": {
+          "location": {
+            "value": "[parameters('secondaryLocation')]"
+          },
+          "opsCenterFQDN": {
+            "value": "[if(equals(parameters('publicIpOnOpsc'), 'yes'), reference('opsCenterPublicIP').outputs.opsCenterFQDN.value, 'opscenter')]"
+          },
+          "uniqueString": {
+            "value": "[variables('uniqueString')]"
+          },
+          "OpsCPassword": {
+            "value": "[parameters('OpsCPassword')]"
+          },
+          "adminUsername": {
+            "value": "[parameters('adminUsername')]"
+          },
+          "adminPassword": {
+            "value": "[parameters('adminPassword')]"
+          },
+          "nodeCount": {
+            "value": "[parameters('nodeCount')]"
+          },
+          "vmSize": {
+            "value": "[parameters('vmSize')]"
+          },
+          "osSettings": {
+            "value": "[variables('osSettings')]"
+          },
+          "vnetName": {
+            "value": "[parameters('vnetName')]"
+          },
+          "subnetName": {
+            "value": "[parameters('subnetName')]"
+          },
+          "vnetRG": {
+            "value": "[parameters('vnetRG')]"
+          },
+          "publicIpOnNodes": {
+            "value": "[parameters('publicIpOnNodes')]"
+          },
+          "namespace": {
+            "value": "dc0"
+          }
+        }
+      }
+    }
+  ],
+    "outputs": {
+        "lifecycleManagerURL": {
+            "type": "string",
+            "value": "[concat('https://', if(equals(parameters('publicIpOnOpsc'),'yes'), reference('opsCenterPublicIP','2017-08-01').outputs.opsCenterFQDN.value, 'xxxx'), ':8443/opscenter/lcm.html')]"
+        },
+        "opsCenterURL": {
+            "type": "string",
+            "value": "[concat('https://', if(equals(parameters('publicIpOnOpsc'),'yes'), reference('opsCenterPublicIP','2017-08-01').outputs.opsCenterFQDN.value, 'xxxx'), ':8443')]"
+        },
+        "opsCenterPubIp": {
+            "type": "string",
+            "value": "[if(equals(parameters('publicIpOnOpsc'),'yes'), reference('opsCenterPublicIP','2017-08-01').outputs.opsCenterPubIp.value, 'xxxx')]"
+        },
+        "opsCenterFQDN": {
+            "type": "string",
+            "value": "[if(equals(parameters('publicIpOnOpsc'),'yes'), reference('opsCenterPublicIP','2017-08-01').outputs.opsCenterFQDN.value, 'xxxx')]"
+        },
+        "nodePubIp": {
+            "type": "string",
+            "value": "[reference('nodesMainLocation','2017-08-01').outputs.nodePubIp.value]"
+        },
+        "nodePrivIp": {
+            "type": "string",
+            "value": "[reference('nodesMainLocation','2017-08-01').outputs.nodePrivIp.value]"
+        }
+    }
+}

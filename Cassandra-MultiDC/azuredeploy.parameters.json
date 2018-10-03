@@ -1,0 +1,39 @@
+{
+  "$schema": "https://schema.management.azure.com/schemas/2015-01-01/deploymentParameters.json#",
+  "contentVersion": "1.0.0.0",
+  "parameters": {
+    "adminUsername": {
+      "value": "csebr"
+    },
+    "nodeCount": {
+      "value": 3
+    },
+    "vmSize": {
+      "value": "Standard_DS3_v2"
+    },
+    "DSEVersion": {
+      "value": "6.0.0"
+    },
+    "publicIpOnNodes": {
+      "value": "yes"
+    },
+    "opscvmSize": {
+      "value": "Standard_D2s_v3"
+    },
+    "location": {
+      "value": "westus"
+    },
+    "secondaryLocation": {
+      "value": "eastus"
+    },
+    "adminPassword": {
+      "value": "Cse12345!@#$%"
+    },
+    "DBPassword": {
+      "value": "Cse12345!@#$%"
+    },
+    "OpsCPassword": {
+      "value": "Cse12345!@#$%"
+    }
+  }
+}
