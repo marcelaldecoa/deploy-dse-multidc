@@ -100,6 +100,13 @@
         "description": "Name of existing vnet, unused if blank."
       }
     },
+    "secondaryVNetName": {
+      "type": "string",
+      "defaultValue": "vnet2",
+      "metadata": {
+        "description": "Name of existing vnet, unused if blank."
+      }
+    },
     "vnetRG": {
       "type": "string",
       "defaultValue": "[resourceGroup().name]",
@@ -120,7 +127,7 @@
         "description": "The base URL for dependent assets",
         "artifactsBaseUrl": ""
       },
-      "defaultValue": "https://github.com/marcelaldecoa/deploy-dse-multidc/tree/master/Cassandra-MultiDC/dse-artifacts"
+      "defaultValue": "https://raw.githubusercontent.com/marcelaldecoa/deploy-dse-multidc/master/Cassandra-MultiDC/dse-artifacts"
     },
     "location": {
       "type": "string",
@@ -174,6 +181,29 @@
             "name": "[parameters('subnetName')]",
             "properties": {
               "addressPrefix": "10.0.0.0/24"
+            }
+          }
+        ]
+      }
+    },
+    {
+      "apiVersion": "2017-11-01",
+      "type": "Microsoft.Network/virtualNetworks",
+      "name": "[parameters('secondaryVNetName')]",
+      "condition": "[equals(parameters('vnetNeworExisting'), 'new')]",
+      "location": "[parameters('secondaryLocation')]",
+      "dependsOn": [],
+      "properties": {
+        "addressSpace": {
+          "addressPrefixes": [
+            "10.1.0.0/16"
+          ]
+        },
+        "subnets": [
+          {
+            "name": "[parameters('subnetName')]",
+            "properties": {
+              "addressPrefix": "10.1.0.0/24"
             }
           }
         ]
@@ -360,7 +390,7 @@
             "value": "[variables('osSettings')]"
           },
           "vnetName": {
-            "value": "[parameters('vnetName')]"
+            "value": "[parameters('secondaryVNetName')]"
           },
           "subnetName": {
             "value": "[parameters('subnetName')]"
@@ -372,7 +402,7 @@
             "value": "[parameters('publicIpOnNodes')]"
           },
           "namespace": {
-            "value": "dc0"
+            "value": "dc1"
           }
         }
       }

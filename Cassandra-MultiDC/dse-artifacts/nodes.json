@@ -386,10 +386,10 @@
       },
       "dependsOn": [
         "[concat('Microsoft.Network/publicIPAddresses/', parameters('namespace'), 'vm', copyindex())]",
-        "Microsoft.Network/networkSecurityGroups/nodeNSG"
+        "[concat('Microsoft.Network/networkSecurityGroups/', parameters('namespace'), 'nodeNSG')]"
       ],
       "properties": {
-        "networkSecurityGroup": "[if(equals(parameters('publicIpOnNodes'), 'yes') , json(concat('{\"id\": \"', resourceId('Microsoft.Network/networkSecurityGroups', 'nodeNSG'),'\"}')), json('null'))]",
+        "networkSecurityGroup": "[if(equals(parameters('publicIpOnNodes'), 'yes') , json(concat('{\"id\": \"', resourceId('Microsoft.Network/networkSecurityGroups', concat(parameters('namespace'), 'nodeNSG')),'\"}')), json('null'))]",
         "ipConfigurations": [
           {
             "name": "ipconfig1",
